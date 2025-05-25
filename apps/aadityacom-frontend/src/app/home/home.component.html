@@ -1,0 +1,32 @@
+<div
+  class="hero flex flex-col justify-between bg-cover bg-center"
+  style="height: 100vh;"
+  [ngClass]="{
+    'bg-[url(/home/mob.png)]': true,
+    'sm:bg-[url(/home/wallpaper.png)]': true
+  }"
+>
+  <div class="hero-overlay bg-opacity-0"></div>
+  <div class="w-full px-6 sm:px-8 lg:px-10 mt-auto">
+    <div class="text-left">
+      <p class="mb-10 text-lg sm:text-2xl text-white">
+        Your Next Favorite Find Awaits, Explore Our Curated Collection.
+      </p>
+      <button class="mb-20 btn btn-primary btn-lg" routerLink="/products">
+        Shop Collection
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<div class="w-full my-10 md:my-20">
+  <h2 class="text-2xl sm:text-3xl font-bold text-center my-8 sm:my-12">
+    Featured Products
+  </h2>
+  @defer (on immediate) {
+  <ecom-featured></ecom-featured>
+  } @placeholder {
+  <div>Loading...</div>
+  }
+</div>

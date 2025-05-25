@@ -1,0 +1,17 @@
+{
+  "name": "aadityacom-backend",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/aadityacom-backend/src",
+  "tags": [],
+  "targets": {
+    "serve": {
+      "executor": "@nxrocks/nx-spring-boot:run",
+      "options": {
+        "root": "apps/aadityacom-backend",
+        "args": [
+          "-Dspring-boot.run.profiles=local"
+        ]
+      }
+    }
+  }
+}

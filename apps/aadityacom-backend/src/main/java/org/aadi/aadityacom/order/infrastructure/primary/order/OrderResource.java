@@ -1,0 +1,136 @@
+package org.aadi.aadityacom.order.infrastructure.primary.order;
+
+import com.stripe.exception.SignatureVerificationException;
+import com.stripe.model.Address;
+import com.stripe.model.Event;
+import com.stripe.model.StripeObject;
+import com.stripe.model.checkout.Session;
+import com.stripe.net.Webhook;
+import org.aadi.aadityacom.order.application.OrderApplicationService;
+import org.aadi.aadityacom.order.domain.order.CartPaymentException;
+import org.aadi.aadityacom.order.domain.order.aggregate.*;
+import org.aadi.aadityacom.order.domain.order.vo.StripeSessionId;
+import org.aadi.aadityacom.order.domain.user.vo.UserAddress;
+import org.aadi.aadityacom.order.domain.user.vo.UserAddressToUpdate;
+import org.aadi.aadityacom.order.domain.user.vo.UserPublicId;
+import org.aadi.aadityacom.product.domain.vo.PublicId;
+import org.aadi.aadityacom.product.infrastructure.primary.ProductsAdminResource;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/orders")
+public class OrderResource {
+
+  private final OrderApplicationService orderApplicationService;
+
+  @Value("${application.stripe.webhook-secret}")
+  private String webhookSecret;
+
+  public OrderResource(OrderApplicationService orderApplicationService) {
+    this.orderApplicationService = orderApplicationService;
+  }
+
+  @GetMapping("/get-cart-details")
+  public ResponseEntity<RestDetailCartResponse> getDetails(@RequestParam List<UUID> productIds) {
+    List<DetailCartItemRequest> cartItemRequests = productIds.stream()
+      .map(uuid -> new DetailCartItemRequest(new PublicId(uuid), 1))
+      .toList();
+
+    DetailCartRequest detailCartRequest = DetailCartRequest.builder().items(cartItemRequests).build();
+    DetailCartResponse cartDetails = orderApplicationService.getCartDetails(detailCartRequest);
+    return ResponseEntity.ok(RestDetailCartResponse.from(cartDetails));
+  }
+
+  @PostMapping("/init-payment")
+  public ResponseEntity<RestStripeSession> initPayment(@RequestBody List<RestCartItemRequest> items) {
+    List<DetailCartItemRequest> detailCartItemRequests = RestCartItemRequest.to(items);
+    try {
+      StripeSessionId stripeSessionInformation = orderApplicationService.createOrder(detailCartItemRequests);
+      RestStripeSession restStripeSession = RestStripeSession.from(stripeSessionInformation);
+      return ResponseEntity.ok(restStripeSession);
+    } catch (CartPaymentException cpe) {
+      return ResponseEntity.badRequest().build();
+    }
+  }
+
+  @PostMapping("/webhook")
+  public ResponseEntity<Void> webhookStripe(@RequestBody String paymentEvent,
+                                            @RequestHeader("Stripe-Signature") String stripeSignature) {
+    Event event = null;
+    try {
+      event = Webhook.constructEvent(
+        paymentEvent, stripeSignature, webhookSecret
+      );
+    } catch (SignatureVerificationException e) {
+      return ResponseEntity.badRequest().build();
+    }
+
+    Optional<StripeObject> rawStripeObjectOpt = event.getDataObjectDeserializer().getObject();
+
+    switch (event.getType()) {
+      case "checkout.session.completed":
+        handleCheckoutSessionCompleted(rawStripeObjectOpt.orElseThrow());
+        break;
+    }
+
+    return ResponseEntity.ok().build();
+  }
+
+  private void handleCheckoutSessionCompleted(StripeObject rawStripeObject) {
+    if (rawStripeObject instanceof Session session) {
+      Address address = session.getCustomerDetails().getAddress();
+
+      UserAddress userAddress = UserAddress.builder()
+        .city(address.getCity())
+        .country(address.getCountry())
+        .zipCode(address.getPostalCode())
+        .street(address.getLine1())
+        .build();
+
+      UserAddressToUpdate userAddressToUpdate = UserAddressToUpdate.builder()
+        .userAddress(userAddress)
+        .userPublicId(new UserPublicId(UUID.fromString(session.getMetadata().get("user_public_id"))))
+        .build();
+
+      StripeSessionInformation sessionInformation = StripeSessionInformation.builder()
+        .userAddress(userAddressToUpdate)
+        .stripeSessionId(new StripeSessionId(session.getId()))
+        .build();
+
+      orderApplicationService.updateOrder(sessionInformation);
+    }
+  }
+
+  @GetMapping("/user")
+  public ResponseEntity<Page<RestOrderRead>> getOrdersForConnectedUser(Pageable pageable) {
+    Page<Order> orders = orderApplicationService.findOrdersForConnectedUser(pageable);
+    PageImpl<RestOrderRead> restOrderReads = new PageImpl<>(
+      orders.getContent().stream().map(RestOrderRead::from).toList(),
+      pageable,
+      orders.getTotalElements()
+    );
+    return ResponseEntity.ok(restOrderReads);
+  }
+
+  @GetMapping("/admin")
+  @PreAuthorize("hasAnyRole('" + ProductsAdminResource.ROLE_ADMIN + "')")
+  public ResponseEntity<Page<RestOrderReadAdmin>> getOrdersForAdmin(Pageable pageable) {
+    Page<Order> orders = orderApplicationService.findOrdersForAdmin(pageable);
+    PageImpl<RestOrderReadAdmin> restOrderReads = new PageImpl<>(
+      orders.getContent().stream().map(RestOrderReadAdmin::from).toList(),
+      pageable,
+      orders.getTotalElements()
+    );
+    return ResponseEntity.ok(restOrderReads);
+  }
+}

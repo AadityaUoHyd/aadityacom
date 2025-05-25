@@ -1,0 +1,119 @@
+<div class="navbar bg-base-100 flex-wrap sm:flex-nowrap px-4">
+  <!-- START: Left - Logo + Hamburger -->
+  <div class="navbar-start w-full sm:w-auto flex justify-between items-center">
+    <a class="btn btn-ghost text-xl p-0" routerLink="/">
+      <div class="logo-text border-1 bg-secondary logo p-2 rounded-xl">
+        <img src="./home/aadityaComLogo.png" alt="Logo" class="logo" />
+        AadityaCom
+      </div>
+    </a>
+
+    <!-- Hamburger (only on mobile/small) -->
+    <button class="btn btn-ghost sm:hidden" (click)="isMenuOpen = !isMenuOpen">
+      <fa-icon [icon]="['fas', 'bars']" class="text-xl"></fa-icon>
+    </button>
+  </div>
+
+  <!-- CENTER: Menu - Hidden on mobile, shown on sm and up -->
+  <div class="navbar-center hidden sm:flex flex-1 justify-center">
+    <ul class="menu menu-horizontal px-1">
+      <li><a href="/">Home</a></li>
+      <li>
+        <details #productsMenu>
+          <summary>Products</summary>
+          <ul class="z-30">
+            @if (categoryQuery.isSuccess() && categoryQuery.data()) {
+            @for (category of categoryQuery.data().content; track category.publicId) {
+            <li>
+              <a [routerLink]="['products']" [queryParams]="{category: category.publicId}" (click)="closeMenu(productsMenu)">
+                {{ category.name }}
+              </a>
+            </li>
+            }
+            }
+          </ul>
+        </details>
+      </li>
+      @if (connectedUserQuery?.status() === "success"
+      && oauth2Service.hasAnyAuthorities(connectedUserQuery?.data()!, "ROLE_ADMIN")) {
+      <li>
+        <details #adminMenu>
+          <summary>Admin</summary>
+          <ul class="z-30">
+            <li><a routerLink="admin/categories/list" (click)="closeMenu(adminMenu)">Categories</a></li>
+            <li><a routerLink="admin/products/list" (click)="closeMenu(adminMenu)">Products</a></li>
+            <li><a routerLink="admin/orders/list" (click)="closeMenu(adminMenu)">Orders</a></li>
+          </ul>
+        </details>
+      </li>
+      }
+    </ul>
+  </div>
+
+  <!-- END: Right - Avatar & Cart -->
+  <div class="navbar-end w-full sm:w-auto justify-end flex gap-6 items-center mt-2 sm:mt-0">
+    <!-- Cart -->
+    <div class="dropdown dropdown-end" routerLink="/cart">
+      <div tabindex="0" role="button">
+        <div class="indicator">
+          <span class="indicator-item badge badge-primary">{{ nbItemsInCart }}</span>
+          <fa-icon [icon]="['fas', 'cart-shopping']" class="menu-icon"></fa-icon>
+        </div>
+      </div>
+    </div>
+    <!-- Avatar -->
+    <div class="dropdown dropdown-end">
+      <div tabindex="0" role="button">
+        @if (this.isConnected() && connectedUserQuery?.data()?.imageUrl !== null) {
+        <div class="border border-solid rounded-full">
+          <img src="{{connectedUserQuery?.data()?.imageUrl}}" alt="user-avatar"
+               class="avatar-unknown rounded-full" width="45px" />
+        </div>
+        } @else {
+        <fa-icon [icon]="['fas', 'user']" class="menu-icon"></fa-icon>
+        }
+      </div>
+      <ul class="dropdown-content menu bg-base-100 rounded-box z-10 w-52 p-2 shadow">
+        @if (this.isConnected()) {
+        <li><button (click)="closeDropDownMenu()" routerLink="/users/orders">My Orders</button></li>
+        <li><button (click)="logout()">Logout</button></li>
+        } @else {
+        <li><button (click)="login()">Login</button></li>
+        }
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- MOBILE MENU -->
+  <div *ngIf="isMenuOpen" class="w-full sm:hidden mt-2">
+    <ul class="menu bg-base-100 rounded-box p-2 shadow w-full">
+      <li><a href="/">Home</a></li>
+      <li>
+        <details>
+          <summary>Products</summary>
+          <ul>
+            @if (categoryQuery.isSuccess() && categoryQuery.data()) {
+            @for (category of categoryQuery.data().content; track category.publicId) {
+            <li><a [routerLink]="['products']" [queryParams]="{category: category.publicId}">{{ category.name }}</a></li>
+            }
+            }
+          </ul>
+        </details>
+      </li>
+      @if (connectedUserQuery?.status() === "success"
+      && oauth2Service.hasAnyAuthorities(connectedUserQuery?.data()!, "ROLE_ADMIN")) {
+      <li>
+        <details>
+          <summary>Admin</summary>
+          <ul>
+            <li><a routerLink="admin/categories/list">Categories</a></li>
+            <li><a routerLink="admin/products/list">Products</a></li>
+            <li><a routerLink="admin/orders/list">Orders</a></li>
+          </ul>
+        </details>
+      </li>
+      }
+    </ul>
+  </div>
+</div>
