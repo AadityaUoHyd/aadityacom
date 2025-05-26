@@ -4,6 +4,18 @@ Monorepo of the AadityaCom Ecommerce platform app. In a monorepo, shared librari
 making it easier to manage dependencies across multiple projects. Nx is a powerful open-source build system that provides tools and 
 techniques for enhancing developer productivity, optimizing CI performance, and maintaining code quality with simplification of dependency management.
 
+# TODO (Still Pending)
+- User Profile
+- Order Process by Admin
+- Admin Dashboard
+- Discount from admin panel
+- Dynamic GST passed by admin panel
+- Review & Ratings
+- search feed
+- Stripe INR currency
+- Send mail in success order
+- cloudinary image upload instead of postgresql blob
+
 ### Key Features:
 - 🛠️ Admin panel for Products, Categories, Orders. 
 - 🔏 Kinde based Authentication & Authorization (OAuth Login via even Google, GitHub).
