@@ -4,6 +4,8 @@ Monorepo of the AadityaCom Ecommerce platform app. In a monorepo, shared librari
 making it easier to manage dependencies across multiple projects. Nx is a powerful open-source build system that provides tools and 
 techniques for enhancing developer productivity, optimizing CI performance, and maintaining code quality with simplification of dependency management.
 
+![](https://raw.githubusercontent.com/AadityaUoHyd/aadityacom/refs/heads/main/aadityacom-screenshot.png)
+
 # TODO (Still Pending)
 - User Profile
 - Order Process by Admin
